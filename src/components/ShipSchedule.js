@@ -9,22 +9,72 @@ const ShipScheduleDisplay = () => {
   const [showOpenGate, setShowOpenGate] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Auth states
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false);
+  const [editNmOperator, setEditNmOperator] = useState('');
+  const [editLogoUrl, setEditLogoUrl] = useState('');
 
-  // Fetch data from API
+  // Check auth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const storedUser = localStorage.getItem('shipapp_user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          const userExists = await window.storage.get(`user:${userData.username}`);
+          if (userExists) {
+            setIsAuthenticated(true);
+            setUsername(userData.username);
+          } else {
+            localStorage.removeItem('shipapp_user');
+          }
+        } catch (error) {
+          localStorage.removeItem('shipapp_user');
+        }
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Fetch schedules with custom data
   useEffect(() => {
     const fetchSchedules = async () => {
       try {
-        const response = await fetch('/api/schedules');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await fetch('/api');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        console.log('Total data dari API:', data.length);
-        console.log('Data:', data);
         
-        setSchedules(data);
+        // Load custom data from storage
+        const schedulesWithCustom = await Promise.all(
+          data.map(async (schedule) => {
+            try {
+              const customDataResult = await window.storage.get(`schedule:${schedule.VOYAGE_NO}`);
+              if (customDataResult) {
+                const customData = JSON.parse(customDataResult.value);
+                return {
+                  ...schedule,
+                  NM_OPERATOR: customData.nmOperator || schedule.NM_OPERATOR,
+                  LOGO_URL: customData.logoUrl || null,
+                  hasCustomData: true
+                };
+              }
+            } catch (err) {
+              // No custom data for this schedule
+            }
+            return schedule;
+          })
+        );
+        
+        setSchedules(schedulesWithCustom);
         setLoading(false);
         setError(null);
       } catch (error) {
@@ -33,69 +83,255 @@ const ShipScheduleDisplay = () => {
         setLoading(false);
       }
     };
-
     fetchSchedules();
-    // Refresh data every 2 minutes
     const interval = setInterval(fetchSchedules, 120000);
     return () => clearInterval(interval);
   }, []);
 
-  // Update current time every second
+  // Time updates
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Blinking animation
+  // Blink animation
   useEffect(() => {
-    const blinkInterval = setInterval(() => {
-      setShowOpenGate(prev => !prev);
-    }, 500);
+    const blinkInterval = setInterval(() => setShowOpenGate(prev => !prev), 600);
     return () => clearInterval(blinkInterval);
   }, []);
 
-  const formatTime = (date) => {
-    return date.toLocaleTimeString('id-ID', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit',
-      hour12: false 
-    });
+  const formatTime = (date) => date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const formatDate = (date) => date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Auth handlers
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    
+    try {
+      if (authMode === 'register') {
+        // Check if user exists
+        try {
+          const existingUser = await window.storage.get(`user:${username}`);
+          if (existingUser) {
+            setAuthError('Username sudah terdaftar');
+            return;
+          }
+        } catch (err) {
+          // User doesn't exist, continue
+        }
+        
+        // Register new user
+        const userData = {
+          username,
+          password,
+          createdAt: new Date().toISOString()
+        };
+        
+        await window.storage.set(`user:${username}`, JSON.stringify(userData));
+        
+        setIsAuthenticated(true);
+        localStorage.setItem('shipapp_user', JSON.stringify({ username }));
+        setShowAuthModal(false);
+        setPassword('');
+        alert('Akun berhasil dibuat!');
+        
+      } else {
+        // Login
+        try {
+          const userResult = await window.storage.get(`user:${username}`);
+          if (!userResult) {
+            setAuthError('Username tidak ditemukan');
+            return;
+          }
+          
+          const userData = JSON.parse(userResult.value);
+          
+          if (userData.password !== password) {
+            setAuthError('Password salah');
+            return;
+          }
+          
+          setIsAuthenticated(true);
+          localStorage.setItem('shipapp_user', JSON.stringify({ username }));
+          setShowAuthModal(false);
+          setPassword('');
+          
+        } catch (err) {
+          setAuthError('Username tidak ditemukan');
+        }
+      }
+    } catch (error) {
+      setAuthError('Terjadi kesalahan: ' + error.message);
+    }
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', { 
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric'
-    });
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUsername('');
+    localStorage.removeItem('shipapp_user');
   };
 
   const handleShipClick = (ship) => {
     setSelectedShip(ship);
+    setIsEditing(false);
   };
 
   const handleBack = () => {
     setSelectedShip(null);
+    setIsEditing(false);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-3xl font-semibold text-white">Memuat data...</div>
-      </div>
-    );
-  }
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditNmOperator(selectedShip.NM_OPERATOR);
+    setEditLogoUrl(selectedShip.LOGO_URL || '');
+  };
 
+  const handleSaveEdit = async () => {
+    try {
+      const customData = {
+        nmOperator: editNmOperator,
+        logoUrl: editLogoUrl,
+        updatedAt: new Date().toISOString(),
+        updatedBy: username
+      };
+      
+      await window.storage.set(
+        `schedule:${selectedShip.VOYAGE_NO}`,
+        JSON.stringify(customData)
+      );
+      
+      // Update local state
+      const updatedShip = {
+        ...selectedShip,
+        NM_OPERATOR: editNmOperator,
+        LOGO_URL: editLogoUrl,
+        hasCustomData: true
+      };
+      
+      setSelectedShip(updatedShip);
+      setSchedules(schedules.map(s => 
+        s.VOYAGE_NO === selectedShip.VOYAGE_NO ? updatedShip : s
+      ));
+      
+      setIsEditing(false);
+      alert('✅ Perubahan berhasil disimpan!');
+    } catch (error) {
+      alert('❌ Gagal menyimpan: ' + error.message);
+    }
+  };
+
+  const handleResetEdit = async () => {
+    if (!confirm('Reset ke data default dari API?')) return;
+    
+    try {
+      await window.storage.delete(`schedule:${selectedShip.VOYAGE_NO}`);
+      
+      // Reload from API
+      const response = await fetch('/api');
+      const data = await response.json();
+      const originalShip = data.find(s => s.VOYAGE_NO === selectedShip.VOYAGE_NO);
+      
+      if (originalShip) {
+        setSelectedShip(originalShip);
+        setSchedules(schedules.map(s => 
+          s.VOYAGE_NO === selectedShip.VOYAGE_NO ? originalShip : s
+        ));
+        setIsEditing(false);
+        alert('✅ Data berhasil direset ke default!');
+      }
+    } catch (error) {
+      alert('❌ Gagal reset: ' + error.message);
+    }
+  };
+
+  // AUTH MODAL
+  const AuthModal = () => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-4">🔐</div>
+          <h2 className="text-3xl font-bold">
+            {authMode === 'login' ? 'Login' : 'Buat Akun'}
+          </h2>
+        </div>
+        
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-2 text-gray-700">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+              placeholder="Masukkan username"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-bold mb-2 text-gray-700">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+              placeholder="Masukkan password"
+              required
+            />
+          </div>
+          
+          {authError && (
+            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl font-semibold">
+              ⚠️ {authError}
+            </div>
+          )}
+          
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors shadow-lg hover:shadow-xl"
+          >
+            {authMode === 'login' ? 'Login' : ' Daftar Akun'}
+          </button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => {
+              setAuthMode(authMode === 'login' ? 'register' : 'login');
+              setAuthError('');
+            }}
+            className="text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+          >
+            {authMode === 'login' 
+              ? 'Daftar akun' 
+              : 'Akun terdaftar? Login'}
+          </button>
+        </div>
+        
+        <button
+          onClick={() => {
+            setShowAuthModal(false);
+            setAuthError('');
+            setPassword('');
+          }}
+          className="mt-4 w-full text-red-600 hover:text-red-800 font-semibold py-2"
+        >
+          Batal
+        </button>
+      </div>
+    </div>
+  );
+
+  // ERROR SCREEN
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-3xl font-semibold text-red-500 mb-4">Error: {error}</div>
-          <div className="text-gray-400">Pastikan API route sudah dibuat di app/api/schedules/route.js</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-lg border border-red-500/50 p-8 rounded-2xl text-center max-w-lg">
+          <div className="text-6xl mb-4">🚨</div>
+          <div className="text-2xl font-bold text-red-400 mb-2">Oops! Ada Masalah</div>
+          <div className="text-gray-300 mb-4">{error}</div>
         </div>
       </div>
     );
@@ -104,52 +340,140 @@ const ShipScheduleDisplay = () => {
   // DETAIL VIEW
   if (selectedShip) {
     return (
-      <div className="min-h-screen bg-blue-100 p-5">
-        <div className="max-w-7xl mx-auto">
-          {/* Back Button */}
-          <button
-            onClick={handleBack}
-            className="mb-6 px-6 py-3 bg-blue-400 hover:bg-blue-500 text-black text-xl rounded-lg flex items-center gap-2 transition-colors"
-          ><span>←</span></button>
-
-          {/* Main Display Card */}
-          <div className="bg-blue p-3">
-            {/* Header Section */}
-            <div className="grid grid-cols-12 gap-4 mb-6">
-              {/* Logo NM_Operator */}
-              <div className="col-span-2 border-2 border-gray-700 h-32 flex items-center justify-center bg-gray-50">
-                <span className="text-xs text-center px-2">NM_Operator</span>
+      <div className="min-h-screen bg-blue-950 p-3 flex flex-col items-center justify-center relative overflow-hidden">
+        {showAuthModal && <AuthModal />}
+        
+        <div className="w-full max-w-full relative z-10">
+          {/* Top Navigation */}
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex gap-2 flex-wrap">
+              <button 
+                onClick={handleBack}
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full text-white font-semibold transition-all flex items-center gap-2"
+              >
+                ← 
+              </button>
+              
+              {isAuthenticated && !isEditing && (
+                <button 
+                  onClick={handleEdit}
+                  className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 rounded-full text-black font-semibold transition-all"
+                >
+                  ✏️ Edit
+                </button>
+              )}
+              
+              {isAuthenticated && isEditing && (
+                <>
+                  <button 
+                    onClick={handleSaveEdit}
+                    className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-semibold"
+                  >
+                    💾 Simpan
+                  </button>
+                  <button 
+                    onClick={() => setIsEditing(false)}
+                    className="px-6 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-white font-semibold"
+                  >
+                    ❌ Batal
+                  </button>
+                  {selectedShip.hasCustomData && (
+                    <button 
+                      onClick={handleResetEdit}
+                      className="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-full text-white font-semibold"
+                    >
+                      🔄 Reset
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            
+            <div className="text-right">
+              <div className="text-5xl font-black text-white">
+                {formatTime(currentTime)}
               </div>
+              <div className="text-white font-medium">{formatDate(currentTime)}</div>
+            </div>
+          </div>
+
+          {/* Main Card */}
+          <div className="rounded-[2.5rem] overflow-hidden">
+            
+            {/* HEADER */}
+            <div className="bg-black p-6 px-8 flex justify-between items-center min-h-[140px]">
+              
+              {/* Logo Operator */}
+              <div className="h-28 w-40 rounded-xl shadow-sm border border-blue-200 flex items-center justify-center overflow-hidden p-2 bg-white">
+                {isEditing ? (
+                  <div className="w-full">
+                    <input
+                      type="text"
+                      value={editLogoUrl}
+                      onChange={(e) => setEditLogoUrl(e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full px-2 py-1 text-xs border rounded mb-1"
+                    />
+                    <div className="text-[8px] text-gray-500">URL gambar logo</div>
+                  </div>
+                ) : selectedShip.LOGO_URL ? (
+                  <img 
+                    src={selectedShip.LOGO_URL}
+                    alt="Logo Operator" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML = '<span class="text-xs text-center font-bold text-gray-400">LOGO<br/>TIDAK TERSEDIA</span>';
+                    }}
+                  />
+                ) : (
+                  <span className="text-xs text-center font-bold text-gray-400">LOGO<br/>OPERATOR</span>
+                )}
+              </div>
+
               {/* Nama Operator */}
-              <div className="col-span-8 h-32 flex items-center justify-center bg-blue-300">
-                <span className="text-3xl font-bold text-center px-4">{selectedShip.NM_OPERATOR}</span>
+              <div className="flex-1 px-4 text-center">
+                <div className="text-white text-sm font-bold tracking-[0.3em] uppercase mb-2">OPERATED BY</div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editNmOperator}
+                    onChange={(e) => setEditNmOperator(e.target.value)}
+                    className="w-full text-center text-2xl md:text-4xl font-black px-4 py-3 border-4 border-yellow-400 rounded-xl bg-white"
+                    placeholder="Nama Operator"
+                  />
+                ) : (
+                  <div className="text-blue-300 font-black text-2xl md:text-5xl tracking-tight leading-none">
+                    {selectedShip.NM_OPERATOR}
+                  </div>
+                )}
               </div>
+
               {/* Logo Pelindo */}
-              <div className="col-span-2 h-32 flex items-center justify-center bg-white-50">
-                <img src="assets/logo_pelindo.png" alt="Pelindo Logo" className="h-16" />
+              <div className="h-28 w-40 flex items-center justify-center rounded-xl">
+                <img src="/assets/logo_pelindo.png" alt="Pelindo" className="h-20 object-contain" onError={(e) => e.target.style.display='none'} />
               </div>
             </div>
 
-            {/* Port Next Section */}
-            <div className="h-64 flex items-center justify-center bg-green-100 mb-6">
-              <div className="text-center">
-                <div className="text-5xl font-bold mb-2">{selectedShip.NM_PORT_NEXT}</div>
-                <div className="text-2xl text-gray-600">{selectedShip.NAMA_KAPAL}</div>
+            {/* BODY */}
+            <div className="p-20 text-center bg-blue-900 relative">
+              <h3 className="text-slate-200 text-3xl font-bold tracking-[0.3em] uppercase mb-4">Tujuan</h3>
+              
+              <div className="text-7xl md:text-8xl font-black text-purple-200 mb-6 leading-tight py-2">
+                {selectedShip.NM_PORT_NEXT}
+              </div>
+
+              <div className="inline-flex items-center gap-3 bg-blue-50 px-8 py-3 rounded-full border border-blue-100">
+                <span className="text-3xl">🚢</span>
+                <span className="text-2xl md:text-3xl font-bold text-slate-700">{selectedShip.NAMA_KAPAL}</span>
               </div>
             </div>
 
-            {/* Status Section */}
-            <div className="h-32 flex items-center justify-center bg-yellow-100">
-              <div className="text-center">
-                <div className="text-4xl font-bold">
-                  <span style={{ visibility: showOpenGate ? 'visible' : 'hidden' }} className="text-green-600">
-                    OPEN CHECK-IN
-                  </span>
-                </div>
-                <div className="text-2xl mt-2">
-                  {formatDate(currentTime)} - {formatTime(currentTime)}
-                </div>
-              </div>
+            {/* FOOTER */}
+            <div className={`py-5 text-center transition-all duration-300 bg-amber-300`}>
+              <h2 className={`text-6xl font-black uppercase tracking-tight text-blue-900`}>
+                {showOpenGate ? 'SILAKAN MASUK' : 'OPEN CHECK-IN'}
+              </h2>
             </div>
           </div>
         </div>
@@ -159,55 +483,122 @@ const ShipScheduleDisplay = () => {
 
   // LIST VIEW
   return (
-    <div className="min-h-screen bg-blue-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white p-8 mb-8">
-          <h1 className="text-5xl font-bold text-center mb-4">JADWAL KEBERANGKATAN KAPAL</h1>
-          <div className="text-center text-2xl text-gray-600">
-            {formatDate(currentTime)} - {formatTime(currentTime)}
+    <div className="min-h-screen bg-blue-950 font-sans text-slate-800">
+      {showAuthModal && <AuthModal />}
+      
+      {/* Header */}
+      <div className="bg-blue-950 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-md">
+              JADWAL KEBERANGKATAN KAPAL
+            </h1>
+            <p className="text-blue-100 mt-1 font-medium opacity-90">PORT DEPARTURE INFORMATION</p>
           </div>
-          <div className="text-center text-xl text-blue-600 font-semibold mt-4">
-            Total: {schedules.length} Kapal dengan Check-in Terbuka
+          
+          <div className="flex items-center gap-4 flex-wrap justify-center">
+            <div className="px-6 py-3 rounded-2xl text-right border border-white">
+              <div className="text-4xl font-bold tracking-widest">{formatTime(currentTime)}</div>
+              <div className="text-sm font-medium text-white uppercase">{formatDate(currentTime)}</div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute top-1/14 right-6 -translate-y-1/2">
+        {!isAuthenticated ? (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:text-blue-900"
+          >
+            🔐 Login
+          </button>
+          ) : (
+          <div className="flex items-center gap-2">
+            <div className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold">
+              👤 {username}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600"
+            >
+              🚪 Logout
+            </button>
+          </div>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-6 md:p-10">
+        {/* Status Bar */}
+        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span className="text-gray-500 font-medium">Live System Updates</span>
+          </div>
+          <div className="font-bold text-black bg-blue-100 px-4 py-1 rounded-lg">
+            {schedules.length} Kapal Tersedia
           </div>
         </div>
 
-        {schedules.length === 0 ? (
-          <div className="bg-white p-12">
-            <div className="text-center text-2xl text-gray-600">
-              Tidak ada jadwal kapal yang tersedia saat ini
+        {loading ? (
+          <div className="bg-white rounded-3xl p-20 text-center">
+            <div className="text-4xl mb-4">⏳</div>
+            <div className="text-xl font-semibold">Memuat data...</div>
+          </div>
+        ) : schedules.length === 0 ? (
+          <div className="bg-white rounded-3xl p-20 text-center shadow-xl border border-blue-50 flex flex-col items-center">
+            <div className="bg-blue-50 p-6 rounded-full mb-6">
+              <span className="text-6xl">🌊</span>
             </div>
+            <h2 className="text-2xl font-bold text-slate-700">Tidak Ada Jadwal</h2>
+            <p className="text-slate-400">Saat ini belum ada kapal yang membuka check-in.</p>
           </div>
         ) : (
-          /* List of Ships */
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-5">
             {schedules.map((schedule, index) => (
               <div
                 key={schedule.VOYAGE_NO || index}
                 onClick={() => handleShipClick(schedule)}
-                className="bg-white p-7 cursor-pointer hover:bg-blue-50 hover:border-blue-600 transition-all transform hover:scale-[1.02]"
+                className="group relative bg-white rounded-2xl p-1 overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl"
               >
-                <div className="grid grid-cols-2 gap-6 items-center">
-                  {/* Info Kapal */}
-                  <div className="col-span-6">
-                    <div className="text-3xl font-bold text-gray-800 mb-2">{schedule.NAMA_KAPAL}</div>
-                    <div className="text-xl text-gray-600">{schedule.NM_OPERATOR}</div>
-                  </div>
-
-                  {/* Tujuan */}
-                  <div className="col-span-4">
-                    <div className="text-sm text-gray-500 mb-1">Tujuan:</div>
-                    <div className="text-2xl font-bold text-green-700">{schedule.NM_PORT_NEXT}</div>
-                    <div className="text-sm text-gray-600 mt-2">
-                      <div>Waktu Tiba: {schedule.ETA || '-'}</div>
-                      <div>Waktu Berangkat: {schedule.ETD || '-'}</div>
+                <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="relative bg-white rounded-xl p-6 h-full flex flex-col md:flex-row items-center gap-6">
+                  
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-md">
+                        {schedule.NM_OPERATOR}
+                      </div>
+                      {schedule.hasCustomData && (
+                        <div className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                          ✏️ Custom
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-3xl font-black text-black mb-2 group-hover:text-blue-600 transition-all">
+                      {schedule.NAMA_KAPAL}
+                    </div>
+                    <div className="flex gap-4 text-sm font-medium text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <span className="text-blue-400">⬇</span> Tiba: {schedule.ETA || '-'}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-green-600">⬆</span> Berangkat: {schedule.ETD || '-'}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Status & Arrow */}
-                  <div className="col-span-1 text-center">
-                    <div className="bg-green-500 text-white px-3 py-2 rounded-lg text-sm font-bold mb-2">
-                      OPEN CHECK-IN
+                  <div className="flex flex-col items-end min-w-[220px]">
+                    <div className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">Tujuan</div>
+                    <div className="text-3xl font-extrabold text-green-600 mb-3">
+                      {schedule.NM_PORT_NEXT}
+                    </div>
+                    
+                    <div className="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg flex items-center gap-2 group-hover:bg-blue-600 transition-colors">
+                      <span className="animate-pulse">●</span> LIHAT DETAIL
                     </div>
                   </div>
                 </div>

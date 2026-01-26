@@ -1,4 +1,3 @@
-// app/api/schedules/route.js
 export async function GET(request) {
   try {
     const response = await fetch(
