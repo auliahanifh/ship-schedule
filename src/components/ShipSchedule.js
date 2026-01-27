@@ -148,7 +148,7 @@ const ShipScheduleDisplay = () => {
           const userData = JSON.parse(userResult.value);
           
           if (userData.password !== password) {
-            setAuthError('Password salah');
+            setAuthError('Kata sandi salah');
             return;
           }
           
@@ -253,7 +253,7 @@ const ShipScheduleDisplay = () => {
         <div className="text-center mb-6">
           <div className="text-5xl mb-4">🔐</div>
           <h2 className="text-3xl font-bold">
-            {authMode === 'login' ? 'Login' : 'Buat Akun'}
+            {authMode === 'login' ? 'Login' : 'Daftar Akun'}
           </h2>
         </div>
         
@@ -271,13 +271,13 @@ const ShipScheduleDisplay = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-bold mb-2 text-gray-700">Password</label>
+            <label className="block text-sm font-bold mb-2 text-gray-700">Kata Sandi</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
-              placeholder="Masukkan password"
+              placeholder="Masukkan kata sandi"
               required
             />
           </div>
@@ -292,7 +292,7 @@ const ShipScheduleDisplay = () => {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors shadow-lg hover:shadow-xl"
           >
-            {authMode === 'login' ? 'Login' : ' Daftar Akun'}
+            {authMode === 'login' ? 'Login' : ' Daftar'}
           </button>
         </form>
         
@@ -305,7 +305,7 @@ const ShipScheduleDisplay = () => {
             className="text-blue-600 hover:text-blue-800 font-semibold hover:underline"
           >
             {authMode === 'login' 
-              ? 'Daftar akun' 
+              ? 'Belum memiliki akun? Daftarkan' 
               : 'Akun terdaftar? Login'}
           </button>
         </div>
@@ -459,10 +459,12 @@ const ShipScheduleDisplay = () => {
             <div className="p-20 text-center bg-blue-900 relative">
               <h3 className="text-slate-200 text-3xl font-bold tracking-[0.3em] uppercase mb-4">Tujuan</h3>
               
-              <div className="text-7xl md:text-8xl font-black text-purple-200 mb-6 leading-tight py-2">
+              <div className="w-full overflow-hidden mb-6 py-2">
+                <div className="text-7xl md:text-8xl font-black text-purple-200 mb-6 leading-tight py-2">
                 {selectedShip.NM_PORT_NEXT}
+                </div>
               </div>
-
+              
               <div className="inline-flex items-center gap-3 bg-blue-50 px-8 py-3 rounded-full border border-blue-100">
                 <span className="text-3xl">🚢</span>
                 <span className="text-2xl md:text-3xl font-bold text-slate-700">{selectedShip.NAMA_KAPAL}</span>
@@ -493,7 +495,7 @@ const ShipScheduleDisplay = () => {
             <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-md">
               JADWAL KEBERANGKATAN KAPAL
             </h1>
-            <p className="text-blue-100 mt-1 font-medium opacity-90">PORT DEPARTURE INFORMATION</p>
+            <p className="text-blue-100 mt-1 font-medium opacity-90">PORT DEPARTURE INFORMATION - PELINDO TANJUNG PERAK</p>
           </div>
           
           <div className="flex items-center gap-4 flex-wrap justify-center">
@@ -507,7 +509,7 @@ const ShipScheduleDisplay = () => {
         {!isAuthenticated ? (
           <button
             onClick={() => setShowAuthModal(true)}
-            className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:text-blue-900"
+            className="px-4 py-3 bg-white text-black font-bold rounded-xl hover:text-blue-900"
           >
             🔐 Login
           </button>
@@ -598,7 +600,7 @@ const ShipScheduleDisplay = () => {
                     </div>
                     
                     <div className="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg flex items-center gap-2 group-hover:bg-blue-600 transition-colors">
-                      <span className="animate-pulse">●</span> LIHAT DETAIL
+                      <span className="animate-pulse">●</span> CEK DETAIL
                     </div>
                   </div>
                 </div>
