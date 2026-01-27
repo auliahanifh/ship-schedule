@@ -12,34 +12,39 @@ const ShipScheduleDisplay = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // UI States
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login'); 
   
+  // Form States
   const [username, setUsername] = useState(''); 
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');  
 
+  // --- EFFECT FETCH DATA ---
   useEffect(() => {
     const fetchSchedules = async () => {
       try {
-        const response = await fetch('/api/'); // 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const response = await fetch('/api/');
+        // Note: Pastikan route '/api/' ini mengembalikan JSON array jadwal
+        if (!response.ok) throw new Error('Gagal mengambil data jadwal');
         const data = await response.json();
-        
         setSchedules(data);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error:', error);
         setLoading(false);
+        // Jangan set error full screen kalau cuma gagal refresh, biar data lama tetep tampil
+        if (schedules.length === 0) setError(error.message);
       }
     };
 
     fetchSchedules();
     const interval = setInterval(fetchSchedules, 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Hapus dependency array yang tidak perlu
 
-  // Time Updates
+  // --- EFFECT JAM & KEDIP ---
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     const blink = setInterval(() => setShowOpenGate(prev => !prev), 600);
@@ -49,14 +54,10 @@ const ShipScheduleDisplay = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const blinkInterval = setInterval(() => setShowOpenGate(prev => !prev), 600);
-    return () => clearInterval(blinkInterval);
-  }, []);
-
   const formatTime = (date) => date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const formatDate = (date) => date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+  // --- HANDLE AUTH ---
   const handleAuth = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -68,10 +69,14 @@ const ShipScheduleDisplay = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
         });
-          const data = await res.json();
+        
+        const data = await res.json();
         if (res.ok) {
           alert('Akun berhasil dibuat! Silakan login.');
           setAuthMode('login');
+          // Reset form setelah register sukses
+          setUsername('');
+          setPassword('');
         } else {
           setAuthError(data.message || 'Gagal registrasi');
         }
@@ -80,15 +85,16 @@ const ShipScheduleDisplay = () => {
       }
 
     } else {
-      // Logic Login (NextAuth)
+      // Logic Login
       const result = await signIn("credentials", {
-        redirect: false, username, password
+        redirect: false,
+        username, 
+        password
       });
 
       if (result?.error) {
-        setAuthError("Username atau kata sandi salah!");
+        setAuthError("Username atau Kata sandi salah!");
       } else {
-        // Berhasil login
         setShowAuthModal(false);
         setPassword('');
         setUsername('');
@@ -96,18 +102,9 @@ const ShipScheduleDisplay = () => {
     }
   };
 
-  const handleShipClick = (ship) => {
-    setSelectedShip(ship);
-  };
-
-  const handleBack = () => {
-    setSelectedShip(null);
-  };
-
   const handleLogout = () => {
     signOut({ redirect: false }); 
   };
-
 
   // --- RENDER ---
   
@@ -115,6 +112,8 @@ const ShipScheduleDisplay = () => {
 
   return (
     <div className="min-h-screen bg-blue-950 font-sans text-slate-800 relative">
+      
+      {/* --- MODAL AUTH DILETAKKAN LANGSUNG DISINI (JANGAN DIBUNGKUS COMPONENT LAGI) --- */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
@@ -167,7 +166,7 @@ const ShipScheduleDisplay = () => {
             
             <div className="mt-6 text-center">
               <button
-                type="button" 
+                type="button" // PENTING: biar ga submit form
                 onClick={() => {
                   setAuthMode(authMode === 'login' ? 'register' : 'login');
                   setAuthError('');
@@ -201,7 +200,7 @@ const ShipScheduleDisplay = () => {
                 onClick={() => setSelectedShip(null)}
                 className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full text-white font-semibold transition-all flex items-center gap-2"
               >
-                ← 
+                ← KEMBALI
               </button>
 
               <div className="text-right hidden md:block">
@@ -210,10 +209,11 @@ const ShipScheduleDisplay = () => {
               </div>  
 
               {session && (
-                 <button
+                 <button 
+                 onClick={() => alert('Fitur Edit Jadwal akan muncul disini!')} 
                  className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold rounded-full shadow-lg flex items-center gap-2"
                >
-                 Edit Jadwal
+                 ✏️ Edit
                </button>
               )}
             </div>
@@ -229,10 +229,10 @@ const ShipScheduleDisplay = () => {
                       {selectedShip.NM_OPERATOR}
                     </div>
                 </div>
-                <div className="h-28 w-40 flex items-center justify-center rounded-xl">
-                <img src="/assets/logo_pelindo.png" alt="Pelindo" className="h-20 object-contain" onError={(e) => e.target.style.display='none'} />
+                 <div className="h-28 w-40 flex items-center justify-center rounded-xl bg-white/10">
+                   <span className="text-white font-bold">PELINDO</span>
+                </div>
               </div>
-            </div>
 
               <div className="p-20 text-center bg-blue-900 relative">
                 <h3 className="text-slate-200 text-3xl font-bold tracking-[0.3em] uppercase mb-4">Tujuan</h3>
@@ -271,12 +271,9 @@ const ShipScheduleDisplay = () => {
                   <div className="text-4xl font-bold tracking-widest">{formatTime(currentTime)}</div>
                   <div className="text-sm font-medium text-white uppercase">{formatDate(currentTime)}</div>
                 </div>
-              </div>
-            </div>        
-          </div>
-          {/* TOMBOL LOGIN DI HEADER */}
-                <div className="absolute top-1/25 right-6 -translate-y-1/2">
-                {!session ? (
+                
+                 {/* TOMBOL LOGIN DI HEADER */}
+                 {!session ? (
                   <button
                     onClick={() => setShowAuthModal(true)}
                     className="px-4 py-3 bg-white text-black font-bold rounded-xl hover:text-blue-900 shadow-lg"
@@ -285,18 +282,20 @@ const ShipScheduleDisplay = () => {
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold text-m">
+                    <div className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold text-sm">
                       👤 {session.user.name || session.user.username || "Admin"}
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 text-m"
+                      className="px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 text-sm"
                     >
-                      Logout
+                      🚪 Logout
                     </button>
                   </div>
                 )}
-                </div>
+              </div>
+            </div>        
+          </div>
 
           <div className="max-w-7xl mx-auto p-6 md:p-10">
             <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-blue-100">
