@@ -16,12 +16,7 @@ const ShipScheduleDisplay = () => {
   const [authMode, setAuthMode] = useState('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState('');
-  
-  // Edit states
-  const [isEditing, setIsEditing] = useState(false);
-  const [editNmOperator, setEditNmOperator] = useState('');
-  const [editLogoUrl, setEditLogoUrl] = useState('');
+  const [authError, setAuthError] = useState('');  
 
   // Check auth on mount
   useEffect(() => {
@@ -174,76 +169,10 @@ const ShipScheduleDisplay = () => {
 
   const handleShipClick = (ship) => {
     setSelectedShip(ship);
-    setIsEditing(false);
   };
 
   const handleBack = () => {
     setSelectedShip(null);
-    setIsEditing(false);
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditNmOperator(selectedShip.NM_OPERATOR);
-    setEditLogoUrl(selectedShip.LOGO_URL || '');
-  };
-
-  const handleSaveEdit = async () => {
-    try {
-      const customData = {
-        nmOperator: editNmOperator,
-        logoUrl: editLogoUrl,
-        updatedAt: new Date().toISOString(),
-        updatedBy: username
-      };
-      
-      await window.storage.set(
-        `schedule:${selectedShip.VOYAGE_NO}`,
-        JSON.stringify(customData)
-      );
-      
-      // Update local state
-      const updatedShip = {
-        ...selectedShip,
-        NM_OPERATOR: editNmOperator,
-        LOGO_URL: editLogoUrl,
-        hasCustomData: true
-      };
-      
-      setSelectedShip(updatedShip);
-      setSchedules(schedules.map(s => 
-        s.VOYAGE_NO === selectedShip.VOYAGE_NO ? updatedShip : s
-      ));
-      
-      setIsEditing(false);
-      alert('✅ Perubahan berhasil disimpan!');
-    } catch (error) {
-      alert('❌ Gagal menyimpan: ' + error.message);
-    }
-  };
-
-  const handleResetEdit = async () => {
-    if (!confirm('Reset ke data default dari API?')) return;
-    
-    try {
-      await window.storage.delete(`schedule:${selectedShip.VOYAGE_NO}`);
-      
-      // Reload from API
-      const response = await fetch('/api');
-      const data = await response.json();
-      const originalShip = data.find(s => s.VOYAGE_NO === selectedShip.VOYAGE_NO);
-      
-      if (originalShip) {
-        setSelectedShip(originalShip);
-        setSchedules(schedules.map(s => 
-          s.VOYAGE_NO === selectedShip.VOYAGE_NO ? originalShip : s
-        ));
-        setIsEditing(false);
-        alert('✅ Data berhasil direset ke default!');
-      }
-    } catch (error) {
-      alert('❌ Gagal reset: ' + error.message);
-    }
   };
 
   // AUTH MODAL
@@ -353,40 +282,6 @@ const ShipScheduleDisplay = () => {
               >
                 ← 
               </button>
-              
-              {isAuthenticated && !isEditing && (
-                <button 
-                  onClick={handleEdit}
-                  className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 rounded-full text-black font-semibold transition-all"
-                >
-                  ✏️ Edit
-                </button>
-              )}
-              
-              {isAuthenticated && isEditing && (
-                <>
-                  <button 
-                    onClick={handleSaveEdit}
-                    className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-semibold"
-                  >
-                    💾 Simpan
-                  </button>
-                  <button 
-                    onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 bg-gray-500 hover:bg-gray-600 rounded-full text-white font-semibold"
-                  >
-                    ❌ Batal
-                  </button>
-                  {selectedShip.hasCustomData && (
-                    <button 
-                      onClick={handleResetEdit}
-                      className="px-6 py-3 bg-red-500 hover:bg-red-600 rounded-full text-white font-semibold"
-                    >
-                      🔄 Reset
-                    </button>
-                  )}
-                </>
-              )}
             </div>
             
             <div className="text-right">
@@ -405,48 +300,15 @@ const ShipScheduleDisplay = () => {
               
               {/* Logo Operator */}
               <div className="h-28 w-40 rounded-xl shadow-sm border border-blue-200 flex items-center justify-center overflow-hidden p-2 bg-white">
-                {isEditing ? (
-                  <div className="w-full">
-                    <input
-                      type="text"
-                      value={editLogoUrl}
-                      onChange={(e) => setEditLogoUrl(e.target.value)}
-                      placeholder="https://example.com/logo.png"
-                      className="w-full px-2 py-1 text-xs border rounded mb-1"
-                    />
-                    <div className="text-[8px] text-gray-500">URL gambar logo</div>
-                  </div>
-                ) : selectedShip.LOGO_URL ? (
-                  <img 
-                    src={selectedShip.LOGO_URL}
-                    alt="Logo Operator" 
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = '<span class="text-xs text-center font-bold text-gray-400">LOGO<br/>TIDAK TERSEDIA</span>';
-                    }}
-                  />
-                ) : (
-                  <span className="text-xs text-center font-bold text-gray-400">LOGO<br/>OPERATOR</span>
-                )}
+                <span className="text-xs text-center font-bold text-gray-400">LOGO<br/>OPERATOR</span>
               </div>
 
               {/* Nama Operator */}
               <div className="flex-1 px-4 text-center">
                 <div className="text-white text-sm font-bold tracking-[0.3em] uppercase mb-2">OPERATED BY</div>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editNmOperator}
-                    onChange={(e) => setEditNmOperator(e.target.value)}
-                    className="w-full text-center text-2xl md:text-4xl font-black px-4 py-3 border-4 border-yellow-400 rounded-xl bg-white"
-                    placeholder="Nama Operator"
-                  />
-                ) : (
                   <div className="text-blue-300 font-black text-2xl md:text-5xl tracking-tight leading-none">
                     {selectedShip.NM_OPERATOR}
                   </div>
-                )}
               </div>
 
               {/* Logo Pelindo */}
