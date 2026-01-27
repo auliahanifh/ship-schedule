@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession, signIn, signOut } from "next-auth/react";
 
 const ShipScheduleDisplay = () => {
@@ -18,6 +18,16 @@ const ShipScheduleDisplay = () => {
   const [username, setUsername] = useState(''); 
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');  
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    operatorName: '',
+    shipName: '',
+    logoFile: null
+  });
+
+  const [logoPreview, setLogoPreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -108,9 +118,67 @@ const ShipScheduleDisplay = () => {
     signOut({ redirect: false }); 
   };
 
+  const handleEditClick = () => {
+    if (!selectedShip) return;
+    setEditFormData({
+      operatorName: selectedShip.NM_OPERATOR || '',
+      shipName: selectedShip.NAMA_KAPAL || '',
+      logoFile: null
+    });
+    setLogoPreview(selectedShip.LOGO_URL || null);
+    setShowEditModal(true);
+  };
 
-  // --- RENDER ---
-  
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Ukuran file terlalu besar (Maks 2MB)");
+        return;
+      }
+      setEditFormData(prev => ({ ...prev, logoFile: file }));
+      const objectUrl = URL.createObjectURL(file);
+      setLogoPreview(objectUrl);
+    }
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    try {
+        const formData = new FormData();
+        formData.append('id_kapal', selectedShip.VOYAGE_NO); 
+        formData.append('operator', editFormData.operatorName);
+        formData.append('kapal', editFormData.shipName);
+        if (editFormData.logoFile) {
+             formData.append('logo', editFormData.logoFile);
+        }
+        const response = await fetch('/api/update', { method: 'POST', body: formData });
+        const data = await response.json();
+    } catch(err){
+      console.error("An error occurred:", err.message);
+    }
+    const updatedShipData = {
+      ...selectedShip,
+      NM_OPERATOR: editFormData.operatorName,
+      NAMA_KAPAL: editFormData.shipName,
+      LOGO_URL: logoPreview 
+    };
+    setSelectedShip(updatedShipData);
+    setSchedules(prevSchedules => 
+      prevSchedules.map(ship => 
+        (ship.VOYAGE_NO === selectedShip.VOYAGE_NO) ? updatedShipData : ship
+      )
+    );
+    setShowEditModal(false);
+    setLogoPreview(null);
+    if(fileInputRef.current) fileInputRef.current.value = "";
+    };
+
   if (error) return <div className="text-white bg-red-900 p-10 text-center">Error: {error}</div>;
 
   return (
@@ -133,12 +201,10 @@ const ShipScheduleDisplay = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black"
-                  placeholder="Masukkan username"
-                  autoFocus // Biar langsung fokus pas dibuka
+                  placeholder="Masukkan username" 
                   required
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-bold mb-2 text-gray-700">Kata Sandi</label>
                 <input
@@ -159,20 +225,20 @@ const ShipScheduleDisplay = () => {
               
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors shadow-lg hover:shadow-xl"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition-colors shadow-lg hover:shadow-xl"
               >
                 {status === 'loading' ? 'Memproses...' : (authMode === 'login' ? 'Masuk' : 'Daftar')}
               </button>
             </form>
             
-            <div className="mt-6 text-center">
+            <div className="mt-4 text-center">
               <button
                 type="button" 
                 onClick={() => {
                   setAuthMode(authMode === 'login' ? 'register' : 'login');
                   setAuthError('');
                 }}
-                className="text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                className="w-full h-10 text-blue-600 border-2 border-blue-600 rounded-lg hover:text-blue-800 font-semibold hover:underline"
               >
                 {authMode === 'login' ? 'Buat Akun' : 'Sudah punya akun?'}
               </button>
@@ -184,10 +250,79 @@ const ShipScheduleDisplay = () => {
                 setShowAuthModal(false);
                 setAuthError('');
               }}
-              className="mt-4 w-full text-red-600 hover:text-red-800 font-semibold py-2"
-            >
-              Batal
+              className="mt-4 w-full text-red-600 border-2 border-red-500 rounded-lg hover:text-red-800 font-semibold py-2"
+            >Batal
             </button>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && selectedShip && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start pt-10 justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative">
+            <div className="text-center mb-6">
+               <h2 className="text-2xl font-bold text-black">Edit Data</h2>
+               <p className="text-gray-500 text-sm">{selectedShip.VOYAGE_NO}</p>
+            </div>
+            <form onSubmit={handleSaveEdit} className="space-y-5">
+            {/* 1. Upload Logo */}
+            <div>
+              <label className="block text-sm font-bold mb-2 text-gray-700">Upload Logo Operator</label>
+                <div className="flex items-center gap-4">
+                  {/* Preview Gambar */}
+                  <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden bg-gray-50 relative">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Preview" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <span className="text-gray-400 text-xs">No Logo</span>
+                    )}
+                  </div>
+                  {/* Input File */}
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      accept="image/png, image/jpeg, image/jpg"
+                      onChange={handleLogoChange}
+                      ref={fileInputRef}
+                      className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">PNG, JPG, JPEG (Max. 2MB)</p>
+                  </div>
+                </div>
+              </div>
+              {/* 2. Edit Nama Operator */}
+              <div>
+                <label className="block text-sm font-bold mb-2 text-gray-700">Nama Operator</label>
+                <input
+                  type="text"
+                  name="operatorName"
+                  value={editFormData.operatorName}
+                  onChange={handleEditFormChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black font-semibold"
+                  required
+                />
+              </div>
+              {/* 3. Edit Nama Kapal */}
+              <div>
+                <label className="block text-sm font-bold mb-2 text-gray-700">Nama Kapal</label>
+                <input
+                  type="text"
+                  name="shipName"
+                  value={editFormData.shipName}
+                  onChange={handleEditFormChange}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black font-semibold"
+                  required
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => {setShowEditModal(false); setLogoPreview(null);}} className="flex-1 py-3 border-2 border-red-500 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors">
+                  Batal
+                </button>
+                <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md">
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -210,7 +345,7 @@ const ShipScheduleDisplay = () => {
               </div>  
 
               {session && (
-                 <button
+                 <button onClick={handleEditClick} 
                  className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold rounded-full shadow-lg flex items-center gap-2"
                >
                  Edit Jadwal
@@ -220,12 +355,16 @@ const ShipScheduleDisplay = () => {
 
             <div className="rounded-[2.5rem] overflow-hidden">
               <div className="bg-black p-6 px-8 flex justify-between items-center min-h-[140px]">
-                <div className="h-28 w-40 rounded-xl shadow-sm border border-blue-200 flex items-center justify-center overflow-hidden p-2 bg-white">
-                   <span className="text-xs font-bold text-gray-400">LOGO</span>
+                <div className="h-28 w-40 rounded-xl shadow-sm border border-blue-200 flex items-center justify-center overflow-hidden p-2 bg-white relative">
+                  {selectedShip.LOGO_URL ? (
+                    <img src={selectedShip.LOGO_URL} alt="Logo Operator" className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-xs font-bold text-gray-400">LOGO</span>
+                  )}
                 </div>
                 <div className="flex-1 px-4 text-center">
                   <div className="text-white text-sm font-bold tracking-[0.3em] uppercase mb-2">OPERATED BY</div>
-                    <div className="text-blue-300 font-black text-2xl md:text-5xl tracking-tight leading-none">
+                    <div className="text-blue-300 font-black text-2xl md:text-5xl tracking-tight leading-none break-words">
                       {selectedShip.NM_OPERATOR}
                     </div>
                 </div>
@@ -352,6 +491,5 @@ const ShipScheduleDisplay = () => {
       )}
     </div>
   );
-};
-
+}
 export default ShipScheduleDisplay;
