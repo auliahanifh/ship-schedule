@@ -225,7 +225,7 @@ const ShipScheduleDisplay = () => {
               
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg hover:shadow-xl"
               >
                 {status === 'loading' ? 'Memproses...' : (authMode === 'login' ? 'Masuk' : 'Daftar')}
               </button>
@@ -238,7 +238,7 @@ const ShipScheduleDisplay = () => {
                   setAuthMode(authMode === 'login' ? 'register' : 'login');
                   setAuthError('');
                 }}
-                className="w-full h-10 text-blue-600 border-2 border-blue-600 rounded-lg hover:text-blue-800 font-semibold hover:underline"
+                className="w-full h-11 text-blue-600 border-2 border-blue-600 rounded-lg hover:text-blue-800 font-semibold hover:underline"
               >
                 {authMode === 'login' ? 'Buat Akun' : 'Sudah punya akun?'}
               </button>
@@ -281,12 +281,12 @@ const ShipScheduleDisplay = () => {
                   <div className="flex-1">
                     <input 
                       type="file" 
-                      accept="image/png, image/jpeg, image/jpg"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
                       onChange={handleLogoChange}
                       ref={fileInputRef}
                       className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
-                    <p className="mt-1 text-xs text-gray-500">PNG, JPG, JPEG (Max. 2MB)</p>
+                    <p className="mt-1 text-xs text-gray-500">PNG, JPG, JPEG, webp (Max. 2MB)</p>
                   </div>
                 </div>
               </div>
@@ -424,7 +424,7 @@ const ShipScheduleDisplay = () => {
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold text-m">
+                    <div className="px-4 py-2 bg-white text-black rounded-lg font-normal text-m">
                       👤 {session.user.name || session.user.username || "Admin"}
                     </div>
                     <button
