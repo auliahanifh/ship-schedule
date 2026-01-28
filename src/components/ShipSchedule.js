@@ -125,7 +125,7 @@ const ShipScheduleDisplay = () => {
       shipName: selectedShip.NAMA_KAPAL || '',
       logoFile: null
     });
-    setLogoPreview(selectedShip.LOGO_URL || null);
+    setLogoPreview(selectedShip.LOGO_OPERATOR || null);
     setShowEditModal(true);
   };
 
@@ -166,7 +166,7 @@ const ShipScheduleDisplay = () => {
       ...selectedShip,
       NM_OPERATOR: editFormData.operatorName,
       NAMA_KAPAL: editFormData.shipName,
-      LOGO_URL: logoPreview 
+      LOGO_OPERATOR: logoPreview 
     };
     setSelectedShip(updatedShipData);
     setSchedules(prevSchedules => 
@@ -265,7 +265,7 @@ const ShipScheduleDisplay = () => {
                <p className="text-gray-500 text-sm">{selectedShip.VOYAGE_NO}</p>
             </div>
             <form onSubmit={handleSaveEdit} className="space-y-5">
-            {/* 1. Upload Logo */}
+            {/* Upload Logo */}
             <div>
               <label className="block text-sm font-bold mb-2 text-gray-700">Upload Logo Operator</label>
                 <div className="flex items-center gap-4">
@@ -290,7 +290,7 @@ const ShipScheduleDisplay = () => {
                   </div>
                 </div>
               </div>
-              {/* 2. Edit Nama Operator */}
+              {/* Edit Nama Operator */}
               <div>
                 <label className="block text-sm font-bold mb-2 text-gray-700">Nama Operator</label>
                 <input
@@ -302,7 +302,7 @@ const ShipScheduleDisplay = () => {
                   required
                 />
               </div>
-              {/* 3. Edit Nama Kapal */}
+              {/* Edit Nama Kapal */}
               <div>
                 <label className="block text-sm font-bold mb-2 text-gray-700">Nama Kapal</label>
                 <input
@@ -356,10 +356,10 @@ const ShipScheduleDisplay = () => {
             <div className="rounded-[2.5rem] overflow-hidden">
               <div className="bg-black p-6 px-8 flex justify-between items-center min-h-[140px]">
                 <div className="h-28 w-40 rounded-xl shadow-sm border border-blue-200 flex items-center justify-center overflow-hidden p-2 bg-white relative">
-                  {selectedShip.LOGO_URL ? (
-                    <img src={selectedShip.LOGO_URL} alt="Logo Operator" className="w-full h-full object-contain" />
+                  {selectedShip.LOGO_OPERATOR ? (
+                    <img src={selectedShip.LOGO_OPERATOR} alt="Logo Operator" className="w-full h-full object-contain" />
                   ) : (
-                    <span className="text-xs font-bold text-gray-400">LOGO</span>
+                    <span className="text-xs font-bold text-gray-400">LOGO OPERATOR</span>
                   )}
                 </div>
                 <div className="flex-1 px-4 text-center">
