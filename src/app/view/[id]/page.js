@@ -78,22 +78,20 @@ export default function DetailPage() {
 
           {/* Tujuan & Nama Kapal */}
           <div className="p-20 text-center bg-blue-900 relative">
-            <h3 className="text-slate-200 text-3xl font-bold tracking-[0.3em] uppercase mb-4">Tujuan</h3>
-            <div className="w-full overflow-hidden mb-6 py-2">
-              <div className="text-7xl md:text-8xl font-black text-purple-200 mb-6 leading-tight py-2">
-                {ship.NM_PORT_NEXT}
-              </div>
+            <div className="inline-flex items-center gap-3 px-8 py-3 rounded-4xl mb-10">
+              <span className="text-7xl">🚢</span>
+              <span className="text-8xl md:text-8xl font-bold text-blue-50">{ship.NAMA_KAPAL}</span>
             </div>
-            <div className="inline-flex items-center gap-3 bg-blue-50 px-8 py-3 rounded-full border border-blue-100">
-              <span className="text-3xl">🚢</span>
-              <span className="text-2xl md:text-3xl font-bold text-slate-700">{ship.NAMA_KAPAL}</span>
+              <h3 className="text-green-300 text-2xl font-bold tracking-[0.3em] uppercase">Tujuan</h3>
+              <div className="w-full overflow-hidden mb-6 py-2">
+                <div className="text-6xl md:text-6xl font-black text-purple-200">{ship.NM_PORT_NEXT}</div>
             </div>
           </div>
 
           {/* Footer Status */}
           <div className="py-5 text-center transition-all duration-300 bg-amber-300">
             <h2 className="text-6xl font-black uppercase tracking-tight text-blue-900">
-              {showOpenGate ? 'SILAKAN MASUK' : 'OPEN CHECK-IN'}
+              {showOpenGate ? 'SILAKAN MASUK' : 'OPEN BOARDING'}
             </h2>
           </div>
 
