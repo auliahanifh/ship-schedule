@@ -23,6 +23,7 @@ const ShipScheduleDisplay = () => {
   const [editFormData, setEditFormData] = useState({
     operatorName: '',
     shipName: '',
+    targetLoketUrl: '',
     logoFile: null
   });
 
@@ -123,11 +124,33 @@ const ShipScheduleDisplay = () => {
     setEditFormData({
       operatorName: selectedShip.NM_OPERATOR || '',
       shipName: selectedShip.NAMA_KAPAL || '',
+      targetLoketUrl: selectedShip.target_loket_url || '',
       logoFile: null
     });
     setLogoPreview(selectedShip.LOGO_OPERATOR || null);
     setShowEditModal(true);
   };
+
+  const handleDownloadShortcut = () => {
+    if (!selectedShip) return;
+    
+    // URL Backend Redirector
+    const baseUrl = window.location.origin;
+    const dynamicUrl = `${baseUrl}/view/${selectedShip.VOYAGE_NO}`;
+
+    const fileContent = `[InternetShortcut]
+    URL=${dynamicUrl}
+    IconIndex=0
+    IconFile=${baseUrl}/favicon.ico`;
+
+  const blob = new Blob([fileContent], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `LOKET - ${editFormData.shipName}.url`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
   const handleEditFormChange = (e) => {
     const { name, value } = e.target;
@@ -157,6 +180,7 @@ const ShipScheduleDisplay = () => {
         if (editFormData.logoFile) {
              formData.append('logo', editFormData.logoFile);
         }
+        formData.append('target_loket_url', editFormData.targetLoketUrl);
         const response = await fetch('/api/update', { method: 'POST', body: formData });
         const data = await response.json();
     } catch(err){
@@ -166,6 +190,7 @@ const ShipScheduleDisplay = () => {
       ...selectedShip,
       NM_OPERATOR: editFormData.operatorName,
       NAMA_KAPAL: editFormData.shipName,
+      target_loket_url: editFormData.targetLoketUrl,
       LOGO_OPERATOR: logoPreview 
     };
     setSelectedShip(updatedShipData);
@@ -262,7 +287,7 @@ const ShipScheduleDisplay = () => {
           <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl relative">
             <div className="text-center mb-6">
                <h2 className="text-2xl font-bold text-black">Edit Data</h2>
-               <p className="text-gray-500 text-sm">{selectedShip.VOYAGE_NO}</p>
+               <p className="text-gray-500 text-sm">VOYAGE_NO: {selectedShip.VOYAGE_NO}</p>
             </div>
             <form onSubmit={handleSaveEdit} className="space-y-5">
             {/* Upload Logo */}
@@ -314,6 +339,23 @@ const ShipScheduleDisplay = () => {
                   required
                 />
               </div>
+              <div>
+                <label className="block text-sm font-bold mb-2 text-gray-700">Link/URL Loket</label>
+                <input
+                  type="text"
+                  name="targetLoketUrl"
+                  value={editFormData.targetLoketUrl}
+                  onChange={handleEditFormChange}
+                  placeholder="localhost/view/[VOYAGE_NO]"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black font-semibold"
+                />
+                <p className="text-xs text-gray-500 mt-1">Shortcut desktop akan mengarah ke link ini.</p>
+              </div>
+              <div className="flex gap-3 pt-0.4 mb-2">
+                <button type="button" onClick= {handleDownloadShortcut} className="flex-1 py-3 border-2 border bg-black text-white font-semibold rounded-xl hover:bg-gray-600 transition-colors">
+                  Download shortcut
+                </button>
+              </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => {setShowEditModal(false); setLogoPreview(null);}} className="flex-1 py-3 border-2 border-red-500 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors">
                   Batal
@@ -355,11 +397,11 @@ const ShipScheduleDisplay = () => {
 
             <div className="rounded-[2.5rem] overflow-hidden">
               <div className="bg-black p-6 px-8 flex justify-between items-center min-h-[140px]">
-                <div className="h-28 w-40 rounded-xl shadow-sm border border-blue-200 flex items-center justify-center overflow-hidden p-2 bg-white relative">
+                <div className="h-28 w-40 rounded-xl flex items-center justify-center overflow-hidden p-2 relative">
                   {selectedShip.LOGO_OPERATOR ? (
-                    <img src={selectedShip.LOGO_OPERATOR} alt="Logo Operator" className="w-full h-full object-contain" />
+                    <img src={selectedShip.LOGO_OPERATOR} alt="Logo Operator" className="w-full h-full rounded-lg"/>
                   ) : (
-                    <span className="text-xs font-bold text-gray-400">LOGO OPERATOR</span>
+                    <span className="text-xs font-bold text-white">LOGO OPERATOR</span>
                   )}
                 </div>
                 <div className="flex-1 px-4 text-center">
