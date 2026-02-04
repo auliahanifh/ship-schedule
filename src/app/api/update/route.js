@@ -17,7 +17,7 @@ export async function POST(request) {
     const operator = formData.get('operator');
     const kapal = formData.get('kapal');
     const file = formData.get('logo');
-    const targetLoketUrl = formData.get('target_loket_url');
+    const idLoket = formData.get('id_loket');
 
     let imageBuffer = null;
 
@@ -27,22 +27,22 @@ export async function POST(request) {
     }
 
     const query = `
-      INSERT INTO schedule_overrides (voyage_no, nm_operator, nama_kapal, logo_operator, target_loket_url)
+      INSERT INTO schedule_overrides (voyage_no, nm_operator, nama_kapal, logo_operator, id_loket)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (voyage_no) 
       DO UPDATE SET 
         nm_operator = EXCLUDED.nm_operator,
         nama_kapal = EXCLUDED.nama_kapal,
         logo_operator = COALESCE($4, schedule_overrides.logo_operator),
-        target_loket_url = EXCLUDED.target_loket_url,
+        id_loket = EXCLUDED.id_loket,
         updated_at = NOW();
     `;
 
     const client = await pool.connect();
-    await client.query(query, [id_kapal, operator, kapal, imageBuffer, targetLoketUrl]);
+    await client.query(query, [id_kapal, operator, kapal, imageBuffer, idLoket]);
     client.release();
 
-    return NextResponse.json({ message: 'Data & Gambar (BYTEA) berhasil disimpan' });
+    return NextResponse.json({ message: 'Pengaturan loket tersimpan' });
 
   } catch (error) {
     console.error('Update error:', error);

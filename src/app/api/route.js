@@ -50,7 +50,8 @@ export async function GET(request) {
           ...ship,
           NM_OPERATOR: overrideData.nm_operator, 
           NAMA_KAPAL: overrideData.nama_kapal,
-          LOGO_OPERATOR: finalLogo
+          LOGO_OPERATOR: finalLogo,
+          id_loket: overrideData.id_loket
         };
       }
       return ship;

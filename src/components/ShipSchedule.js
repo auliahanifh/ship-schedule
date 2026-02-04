@@ -23,7 +23,7 @@ const ShipScheduleDisplay = () => {
   const [editFormData, setEditFormData] = useState({
     operatorName: '',
     shipName: '',
-    targetLoketUrl: '',
+    idLoket: '',
     logoFile: null
   });
 
@@ -119,7 +119,7 @@ const ShipScheduleDisplay = () => {
     setEditFormData({
       operatorName: selectedShip.NM_OPERATOR || '',
       shipName: selectedShip.NAMA_KAPAL || '',
-      targetLoketUrl: selectedShip.target_loket_url || '',
+      idLoket: selectedShip.id_loket || '',
       logoFile: null
     });
     setLogoPreview(selectedShip.LOGO_OPERATOR || null);
@@ -127,11 +127,14 @@ const ShipScheduleDisplay = () => {
   };
 
   const handleDownloadShortcut = () => {
-    if (!selectedShip) return;
+    if (!editFormData.idLoket){
+      alert("Pilih nomor loket terlebih dahulu!");
+      return;
+    }
     
     // URL Backend Redirector
     const baseUrl = window.location.origin;
-    const dynamicUrl = `${baseUrl}/view/${selectedShip.VOYAGE_NO}`;
+    const dynamicUrl = `${baseUrl}/api/loket/${editFormData.idLoket}`;
 
     const fileContent = `[InternetShortcut]
     URL=${dynamicUrl}
@@ -141,7 +144,7 @@ const ShipScheduleDisplay = () => {
   const blob = new Blob([fileContent], { type: 'text/plain' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `LOKET - ${editFormData.shipName}.url`;
+      link.download = `LOKET - ${editFormData.idLoket}.url`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -175,7 +178,7 @@ const ShipScheduleDisplay = () => {
         if (editFormData.logoFile) {
              formData.append('logo', editFormData.logoFile);
         }
-        formData.append('target_loket_url', editFormData.targetLoketUrl);
+        formData.append('id_loket', editFormData.idLoket);
         const response = await fetch('/api/update', { method: 'POST', body: formData });
         const data = await response.json();
     } catch(err){
@@ -185,7 +188,7 @@ const ShipScheduleDisplay = () => {
       ...selectedShip,
       NM_OPERATOR: editFormData.operatorName,
       NAMA_KAPAL: editFormData.shipName,
-      target_loket_url: editFormData.targetLoketUrl,
+      id_loket: editFormData.idLoket,
       LOGO_OPERATOR: logoPreview 
     };
     setSelectedShip(updatedShipData);
@@ -335,16 +338,21 @@ const ShipScheduleDisplay = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold mb-2 text-gray-700">Link/URL Loket</label>
-                <input
-                  type="text"
-                  name="targetLoketUrl"
-                  value={editFormData.targetLoketUrl}
+                <label className="block text-sm font-bold mb-2 text-gray-700">Pilih loket</label>
+                <select
+                  name="idLoket"
+                  value={editFormData.idLoket}
                   onChange={handleEditFormChange}
-                  placeholder="localhost/view/[VOYAGE_NO]"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black font-semibold"
-                />
-                <p className="text-xs text-gray-500 mt-1">Shortcut desktop akan mengarah ke link ini.</p>
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black font-semibold">
+                <option value="">Pilih Nomor Loket</option>
+                {[...Array(20)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Loket {i + 1}
+                    </option>))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Jadwal ini akan tampil jika shortcut <b>Loket {editFormData.idLoket || '...'}</b> dibuka.
+                </p>
               </div>
               <div className="flex gap-3 pt-0.4 mb-2">
                 <button type="button" onClick= {handleDownloadShortcut} className="flex-1 py-3 border-2 border bg-black text-white font-semibold rounded-xl hover:bg-gray-600 transition-colors">
