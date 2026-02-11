@@ -26,6 +26,12 @@ export async function POST(request) {
       imageBuffer = Buffer.from(arrayBuffer);
     }
 
+    const client = await pool.connect();
+
+    if (idLoket) {
+       await client.query(`UPDATE schedule_overrides SET id_loket = NULL WHERE id_loket = $1`, [idLoket]);
+    }
+
     const query = `
       INSERT INTO schedule_overrides (voyage_no, nm_operator, nama_kapal, logo_operator, id_loket)
       VALUES ($1, $2, $3, $4, $5)
@@ -38,7 +44,6 @@ export async function POST(request) {
         updated_at = NOW();
     `;
 
-    const client = await pool.connect();
     await client.query(query, [id_kapal, operator, kapal, imageBuffer, idLoket]);
     client.release();
 

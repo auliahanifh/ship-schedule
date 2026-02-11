@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg'; 
 
@@ -29,7 +31,13 @@ export async function GET(request, { params }) {
 
     const voyageNo = result.rows[0].voyage_no;
     const baseUrl = new URL(request.url).origin;
-    return NextResponse.redirect(`${baseUrl}/view/${voyageNo}`, 307);
+    const response = NextResponse.redirect(`${baseUrl}/view/${voyageNo}?id_loket=${loketId}`, 307);
+
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+
+    return response;
 
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

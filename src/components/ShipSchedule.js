@@ -53,7 +53,7 @@ const ShipScheduleDisplay = () => {
   // Time Updates
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    const blink = setInterval(() => setShowOpenGate(prev => !prev), 600);
+    const blink = setInterval(() => setShowOpenGate(prev => !prev), 1000);
     return () => {
       clearInterval(timer);
       clearInterval(blink);
@@ -144,7 +144,7 @@ const ShipScheduleDisplay = () => {
   const blob = new Blob([fileContent], { type: 'text/plain' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `LOKET - ${editFormData.idLoket}.url`;
+      link.download = `LOKET ${editFormData.idLoket}.url`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -347,11 +347,11 @@ const ShipScheduleDisplay = () => {
                 <option value="">Pilih Nomor Loket</option>
                 {[...Array(20)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>
-                    Loket {i + 1}
+                    {i + 1}
                     </option>))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Jadwal ini akan tampil jika shortcut <b>Loket {editFormData.idLoket || '...'}</b> dibuka.
+                <p className="text-xs text-gray-700">
+                  Jadwal ini akan tampil di <b>Loket {editFormData.idLoket || '...'}</b>.
                 </p>
               </div>
               <div className="flex gap-3 pt-0.4 mb-2">
@@ -385,8 +385,8 @@ const ShipScheduleDisplay = () => {
               </button>
 
               <div className="text-right hidden md:block">
-                <div className="text-5xl font-black text-white">{formatTime(currentTime)}</div>
-                <div className="text-white font-medium">{formatDate(currentTime)}</div>
+                <div className="text-7xl font-black text-white">{formatTime(currentTime)}</div>
+                <div className="text-3xl text-white font-medium uppercase">{formatDate(currentTime)}</div>
               </div>  
 
               {session && (
@@ -409,23 +409,23 @@ const ShipScheduleDisplay = () => {
                 </div>
                 <div className="flex-1 px-4 text-center">
                   <div className="text-white text-sm font-bold tracking-[0.3em] uppercase mb-2">OPERATED BY</div>
-                    <div className="text-blue-300 font-black text-2xl md:text-5xl tracking-tight leading-none break-words">
+                    <div className="text-blue-300 font-black text-2xl md:text-6xl tracking-tight leading-none break-words">
                       {selectedShip.NM_OPERATOR}
                     </div>
                 </div>
                 <div className="h-28 w-40 flex items-center justify-center rounded-xl">
-                <img src="/assets/logo_pelindo.png" alt="Pelindo" className="h-20 object-contain" onError={(e) => e.target.style.display='none'} />
+                <img src="/assets/logo_pelindo.png" alt="Pelindo" className="h-28 object-contain" onError={(e) => e.target.style.display='none'} />
               </div>
             </div>
 
               <div className="p-20 text-center bg-blue-900 relative">
                 <div className="inline-flex items-center gap-3 px-8 py-3 rounded-4xl mb-10">
                   <span className="text-7xl">🚢</span>
-                  <span className="text-8xl md:text-8xl font-bold text-blue-50">{selectedShip.NAMA_KAPAL}</span>
+                  <span className="text-9xl md:text-[10rem] font-bold text-blue-50">{selectedShip.NAMA_KAPAL}</span>
                 </div>
                 <h3 className="text-green-300 text-2xl font-bold tracking-[0.3em] uppercase">Tujuan</h3>
                 <div className="w-full overflow-hidden mb-6 py-2">
-                  <div className="text-6xl md:text-6xl font-black text-purple-200">
+                  <div className="text-7xl md:text-9xl font-black text-purple-300">
                   {selectedShip.NM_PORT_NEXT}
                   </div>
                 </div>
@@ -433,7 +433,7 @@ const ShipScheduleDisplay = () => {
 
               <div className={`py-5 text-center transition-all duration-300 bg-amber-300`}>
                 <h2 className={`text-6xl font-black uppercase tracking-tight text-blue-900`}>
-                  {showOpenGate ? 'SILAKAN MASUK' : 'OPEN BOARDING'}
+                  {showOpenGate ? 'SIAPKAN TIKET DAN IDENTITAS' : 'OPEN BOARDING'}
                 </h2>
               </div>
             </div>
