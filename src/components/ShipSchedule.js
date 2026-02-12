@@ -223,7 +223,7 @@ const ShipScheduleDisplay = () => {
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-black"
                   placeholder="Masukkan username" 
                   required
                 />
@@ -234,7 +234,7 @@ const ShipScheduleDisplay = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 text-black"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 text-black"
                   placeholder="Masukkan kata sandi"
                   required
                 />
