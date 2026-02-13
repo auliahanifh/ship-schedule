@@ -212,7 +212,7 @@ const ShipScheduleDisplay = () => {
              formData.append('logo', editFormData.logoFile);
         }
         formData.append('id_loket', editFormData.idLoket);
-        const response = await fetch('/api/update', { method: 'POST', body: formData });
+        const response = await fetch('/api/update-ship', { method: 'POST', body: formData });
         const data = await response.json();
     } catch(err){
       console.error("An error occurred:", err.message);
