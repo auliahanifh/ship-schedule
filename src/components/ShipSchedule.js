@@ -20,6 +20,12 @@ const ShipScheduleDisplay = () => {
   const [authError, setAuthError] = useState('');  
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    newUsername: '',
+    oldPassword: '',
+    newPassword: ''
+  });
   const [editFormData, setEditFormData] = useState({
     operatorName: '',
     shipName: '',
@@ -86,7 +92,6 @@ const ShipScheduleDisplay = () => {
       }
 
     } else {
-      // Logic Login (NextAuth)
       const result = await signIn("credentials", {
         redirect: false, username, password
       });
@@ -94,11 +99,39 @@ const ShipScheduleDisplay = () => {
       if (result?.error) {
         setAuthError("Username atau kata sandi salah!");
       } else {
-        // Berhasil login
         setShowAuthModal(false);
         setPassword('');
         setUsername('');
       }
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const res = await fetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentUsername: session.user.username || session.user.name, 
+          username: profileForm.newUsername,
+          oldPassword: profileForm.oldPassword,
+          newPassword: profileForm.newPassword
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('Profil berhasil diupdate! Silakan login ulang.');
+        setShowProfileModal(false);
+        signOut();
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan sistem');
     }
   };
 
@@ -254,28 +287,89 @@ const ShipScheduleDisplay = () => {
               </button>
             </form>
             
-            <div className="mt-4 text-center">
-              <button
+            <div className="mt-2 text-center">
+              <div className="flex gap-2 pt-1">
+                <button
                 type="button" 
                 onClick={() => {
                   setAuthMode(authMode === 'login' ? 'register' : 'login');
                   setAuthError('');
                 }}
-                className="w-full h-11 text-blue-600 border-2 border-blue-600 rounded-lg hover:text-blue-800 font-semibold hover:underline"
+                className="w-full h-11 text-blue-600 border-3 border-blue-600 rounded-lg hover:text-blue-800 font-semibold hover:underline"
               >
                 {authMode === 'login' ? 'Buat Akun' : 'Sudah punya akun?'}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthModal(false);
+                  setAuthError('');
+                }}
+                className="mt-0.4 w-full text-red-600 border-3 border-red-500 rounded-lg hover:text-red-800 font-semibold py-2 hover:underline"
+              >Batal
+              </button>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIT PROFILE USER */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-2xl font-bold text-center mb-6">Edit Profile</h2>
             
-            <button
-              type="button"
-              onClick={() => {
-                setShowAuthModal(false);
-                setAuthError('');
-              }}
-              className="mt-4 w-full text-red-600 border-2 border-red-500 rounded-lg hover:text-red-800 font-semibold py-2"
-            >Batal
-            </button>
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-2">Username saat ini/baru*</label>
+                <input
+                  type="text"
+                  value={profileForm.newUsername}
+                  onChange={(e) => setProfileForm({...profileForm, newUsername: e.target.value})}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-black"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Kata sandi saat ini*</label>
+                <input
+                  type="password"
+                  value={profileForm.oldPassword}
+                  onChange={(e) => setProfileForm({...profileForm, oldPassword: e.target.value})}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-black"
+                  placeholder="Masukkan kata sandi sekarang"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Kata sandi baru (Opsional)</label>
+                <input
+                  type="password"
+                  value={profileForm.newPassword}
+                  onChange={(e) => setProfileForm({...profileForm, newPassword: e.target.value})}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-black"
+                  placeholder="Masukkan kata sandi baru"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="flex-1 py-3 border-2 border-gray-500 text-gray-700 font-bold rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700"
+                >
+                  Simpan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -468,10 +562,20 @@ const ShipScheduleDisplay = () => {
                     🔐 Login
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="px-4 py-2 bg-white text-black rounded-lg font-normal text-m">
-                      👤 {session.user.name || session.user.username || "Admin"}
-                    </div>
+                <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setProfileForm({ 
+                  newUsername: session.user.name || session.user.username, 
+                  oldPassword: '', 
+                  newPassword: '' 
+                  });
+                  setShowProfileModal(true);
+                  }}
+                  className="px-4 py-2 bg-white text-black rounded-lg font-bold text-m hover:bg-gray-200 hover:text-blue-900 transition-all shadow-sm flex items-center gap-2"
+                  title="Klik untuk edit profil"
+                >
+                  👤 {session.user.name || session.user.username || "Admin"}
+                </button>
                     <button
                       onClick={handleLogout}
                       className="px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 text-m"

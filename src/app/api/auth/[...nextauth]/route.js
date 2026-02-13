@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import pool from "@/lib/db"; 
+import bcrypt from "bcryptjs"; 
 
 const handler = NextAuth({
   session: {
@@ -23,11 +24,19 @@ const handler = NextAuth({
         const result = await pool.query("SELECT * FROM users WHERE username = $1", [credentials.username]);
         const user = result.rows[0];
 
-        if (!user) return null; 
+        if (!user) return null;
+        
+        let isValid = false;
 
-        const passwordMatch = user.password === credentials.password;
+        const isHashed = user.password.startsWith('$');
 
-        if (!passwordMatch) return null; 
+        if (isHashed) {
+            isValid = await bcrypt.compare(credentials.password, user.password);
+        } else {
+            isValid = user.password === credentials.password;
+        }
+
+        if (!isValid) return null; 
         
         return {
           id: user.id,
