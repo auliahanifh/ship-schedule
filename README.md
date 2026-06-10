@@ -14,3 +14,5 @@ bun dev
 ```
 
 Kemudian, buka URL [http://localhost:3000](http://localhost:3000) pada web browser device, untuk melihat aplikasi. 
+
+Jika terkendala dapat menghubungi namedauliah@gmail.com
